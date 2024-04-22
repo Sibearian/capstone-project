@@ -1,0 +1,20 @@
+# fly.toml app configuration file generated for capstone-project-bms on 2024-04-22T23:06:08+05:30
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'capstone-project-bms'
+primary_region = 'sin'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
