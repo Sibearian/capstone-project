@@ -8,6 +8,8 @@ import (
 	"os"
 )
 
+var db *sql.DB
+
 func Server(config map[string]string) {
 	mux := http.NewServeMux()
 	ctx := context.Background()
@@ -16,6 +18,10 @@ func Server(config map[string]string) {
 		log.Fatalf("failed to opendb %s: %s", config["TURSO_DB_URL"], err)
 		os.Exit(1)
 	}
+
+	mux.HandleFunc("POST /", StoreSensorData)
+
+	http.ListenAndServe(":3000", mux)
 
 	<-ctx.Done()
 	defer db.Close()

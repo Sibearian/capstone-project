@@ -1,24 +1,17 @@
 package server
 
-import "time"
-
-type OrgId string
-type SData int
-
 type Organization struct {
-	OrgId
+	OrgId        string
 	SensorNodeId string
 	Sensors      int
 }
 
 type SensorData struct {
-	OrgId
-	SensorNodeId string
-	TimeStamp    time.Time
-	Sensor1      SData
-	Sensor2      SData
-	Sensor3      SData
-	Sensor4      SData
-	Sensor5      SData
-	Sensor6      SData
+	OrgId        string `json:"org-id"`
+	SensorNodeId string `json:"sensor-id"`
+	TimeStamp    int64  `json:"timestamp"`
+	DO2          int    `json:"DO2"`
+	Turbidity    int    `json:"Turbidity"`
+	Temperature  int    `json:"Temperature"`
+	Ph           int    `json:"Ph"`
 }
