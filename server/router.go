@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	_ "github.com/tursodatabase/libsql-client-go/libsql"
 )
 
 var db *sql.DB
