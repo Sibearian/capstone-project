@@ -10,8 +10,6 @@ import (
 	_ "github.com/tursodatabase/libsql-client-go/libsql"
 )
 
-var db *sql.DB
-
 func Server(config map[string]string) {
 	mux := http.NewServeMux()
 	ctx := context.Background()
@@ -21,7 +19,7 @@ func Server(config map[string]string) {
 		os.Exit(1)
 	}
 
-	mux.HandleFunc("POST /", StoreSensorData)
+	mux.HandleFunc("POST /", wrapperPostData(db))
 
 	http.ListenAndServe(":3000", mux)
 
