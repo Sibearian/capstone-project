@@ -1,66 +1,63 @@
 import libsql_experimental as libsql
 from joblib import load
-import requests
 import time
+import smtplib
+from email.mime.text import MIMEText
+import os
+from dotenv import load_dotenv, dotenv_values 
+import resend
+
+# loading variables from .env file
+load_dotenv() 
 
 # Define the connection parameters
-url = "libsql://capstone-sibearian.turso.io"
-auth_token = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3MTMxOTkyMTksImlkIjoiNzNjMzJjNmYtMzhlNC00MTNlLTliZTgtMDM1M2VkNjYzZjRlIn0.oMGJmQe56pBTMt5auJja63N0QEr3i84qhbNJtvkxwdPwlz0l1RmB5C07_HVBVF7USdFvFMvweNubDOrS5rzzAg"
+url = os.getenv('TURSO_DATABASE_URL')
+auth_token = os.getenv('TURSO_AUTH_TOKEN')
+resend.api_key = os.getenv('RESEND_API_KEY')
 
 # Connect to the database
 conn = libsql.connect("hello.db", sync_url=url, auth_token=auth_token)
 conn.sync()
 
 # Function to send alerts
-def alert():
-    # Define the URL and headers
-    url = 'https://graph.facebook.com/295149117018021/messages'
-    headers = {
-        'Authorization': 'Bearer EAANLrM0xTmoBOwNGDf0uWAA1n0ZArdZAGMkHatZABZAQoZANMGwL9DNCpHJtMZBxduHbRatHZAG98JpRvGSNyu1DdoqIE3eZAdAgYJBwGYUy5n3JXhUNxsmuq9HxywkPJHNWZBlJha7ICCpAjEAKlx3BLZBnJPPE92KwZAU0jOozVHivSVI5TY7OnKBEAkEWychRJnnlWG7lqGU3ZBl4vKPn7KoD4zZAqDQ7eCKIiwHMZD',
-        'Content-Type': 'application/json'
-    }
-
-    # Define the request body
-    payload = {
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": "919008077372",
-        "type": "text",
-        "text": {"body": "Testing Whatsapp custom message"}
-    }
-
-    # Send the POST request
-    response = requests.post(url, headers=headers, json=payload)
-
-    # Check if the message was sent successfully
-    data = response.json()
-    if 'messages' in data and len(data['messages']) > 0:
-        print("Message sent successfully! Message ID:", data['messages'][0]['id'])
-    else:
-        print("Failed to send message.")
+def alert(sensor_idt):
+    sensor_id = sensor_idt[0]
+    print(sensor_id)
+    # Fetch latest sensor data for the given sensor ID
+    result = conn.execute(f"SELECT do2, temperature, ph FROM sensor_data WHERE id = '{sensor_id}' AND timestamp = (SELECT MAX(timestamp) FROM sensor_data WHERE id = '{sensor_id}');").fetchone()
     
-# Load the machine learning model
-model = load('model.joblib')
-
-# Main loop
-while True:
-    # Fetch latest sensor data
-    result = conn.execute("SELECT do2, temperature, ph FROM sensor_data WHERE timestamp = (SELECT MAX(timestamp) FROM sensor_data);").fetchone()
     if result:
-        ph = result[2]
-        do2 = result[0]
-        temp = result[1]
+        ph, do2, temp = result
+
+        # Load the machine learning model
+        model = load('model.joblib')
 
         # Make predictions
         predictions = model.predict([[ph, do2, temp]])
 
         # Check predictions and trigger alert if necessary
         if predictions == [-1]:
-            #alert()
-            conn.execute("INSERT INTO alerts (alert) VALUES ('tests')")
-            conn.execute('commit')
+            try:
+                r = resend.Emails.send({
+                    "from": "waterqualiyalert@resend.dev",
+                    "to": "parikshithegde2@gmail.com",
+                    "subject": "Anomaly detected",
+                    "html": f"<p>Anomaly detected for sensor ID {sensor_id}. <strong>Please take necessary action!</strong>!</p>"
+                })
+                print(f"Alert sent for sensor ID {sensor_id}")
+            except Exception as e:
+                print(f"Failed to send email for sensor ID {sensor_id}: {e}")
     else:
-        print("No sensor data found.")
-    
+        print(f"No data found for sensor ID {sensor_id}")
+
+# Main loop
+while True:
+    # Fetch distinct sensor IDs
+    sensor_ids = conn.execute('SELECT DISTINCT id FROM sensor_data').fetchall()
+    # Iterate over each sensor ID
+    for sensor_id in sensor_ids:
+        alert(sensor_id)
+        conn.execute("INSERT INTO alerts (alert) VALUES ('Anomaly detected. Please take necessary action!')")
+        conn.execute('commit')
     # Wait for 10 minutes before fetching new data
     time.sleep(600)  # Wait for 600 seconds (10 minutes) before fetching new data

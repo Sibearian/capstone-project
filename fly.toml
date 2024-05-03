@@ -1,18 +1,26 @@
-# fly.toml app configuration file generated for capstone-project-bms on 2024-04-22T23:06:08+05:30
+# fly.toml app configuration file generated for capstone-project-bms-floral-smoke-3427 on 2024-05-02T23:32:56+05:30
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'capstone-project-bms'
+app = 'capstone-project-bms-floral-smoke-3427'
 primary_region = 'sin'
+
+[build]
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = true
+  auto_stop_machines = false
   auto_start_machines = true
   min_machines_running = 0
   processes = ['app']
+
+[[services]]
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+    tls_options = { alpn = ["h2", "http/1.1"], versions = ["TLSv1.2", "TLSv1.3"], default_self_signed = false }
 
 [[vm]]
   memory = '1gb'

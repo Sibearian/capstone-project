@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"database/sql"
 	"log"
 	"net/http"
@@ -10,19 +9,18 @@ import (
 	_ "github.com/tursodatabase/libsql-client-go/libsql"
 )
 
-func Server(config map[string]string) {
+func RunServer(config map[string]string, address string) {
 	mux := http.NewServeMux()
-	ctx := context.Background()
 	db, err := sql.Open("libsql", config["TURSO_DB_URL"])
 	if err != nil {
 		log.Fatalf("failed to opendb %s: %s", config["TURSO_DB_URL"], err)
 		os.Exit(1)
 	}
 
-	mux.HandleFunc("POST /", wrapperPostData(db))
+	mux.HandleFunc("GET /", heartbeat)
+	mux.HandleFunc("POST /api/data", postData(config["TURSO_DB_URL"]))
 
-	http.ListenAndServe(":3000", mux)
+	http.ListenAndServe(address, mux)
 
-	<-ctx.Done()
 	defer db.Close()
 }
